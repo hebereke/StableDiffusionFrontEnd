@@ -339,6 +339,128 @@ def main():
     print(f"Your samples are ready and waiting for you here: \n{outpath} \n"
           f" \nEnjoy.")
 
+class guiMain(tk.Frame):
+    def __init__(self, master=None):
+        super().__init__()
+        self.master.title(u'StableDiffusionFrontEnd')
+        self.master.geometry('600x300')
+        self.paramsEntry = {}
+        self.create_widgets()
+        self.pack()
+    def create_widgets(self):
+        self.outputpdf_textbox = guiTextEntry(master=self, label=u'出力ファイル名', inittext=self.params.output_pdf, boxwidth=40)
+        self.imgfolder_dirdiag = guiDirDiag(master=self, label=u'出力フォルダ', initdir=self._folder)
+        self.imgfolder_dirdiag.pack(anchor=tk.W)
+        self.outfolder_dirdiag.pack(anchor=tk.W)
+        self.outputpdf_textbox.pack(anchor=tk.W)
+
+        frame_crop = tk.Frame(master=self)
+        self.crop_textbox = guiTextEntry(master=frame_crop, label=u'左右切り取りマージン', boxwidth=10, inittext=self.params.margin)
+        self.crop_textbox.grid(row=0, column=0, sticky=tk.W)
+        frame_crop.pack(anchor=tk.W)
+
+        frame_recursive = tk.Frame(master=self)
+        self.suffix_textbox = guiTextEntry(master=frame_recursive, label=u'添字', boxwidth=10, inittext=self.params.suffix)
+        self.initcount_textbox = guiTextEntry(master=frame_recursive, label=u'始めの数字', boxwidth=5, inittext=self.params.initcount)
+        self.recursive_check = guiRadioButton(master=frame_recursive, label=u'入力フォルダ以下の各フォルダで変換', initcond=self.params.recursive,
+            slave_widget=None)
+        self.suffix_textbox.grid(row=0, column=1)
+        self.initcount_textbox.grid(row=0, column=2)
+        self.recursive_check.grid(row=0, column=0, sticky=tk.W)
+        frame_recursive.pack(anchor=tk.W)
+
+        frame_split = tk.Frame(master=self)
+        frame_split_textbox = tk.Frame(master=frame_split)
+        self.splitpages_textbox = guiTextEntry(master=frame_split_textbox, label=u'分割するページ', boxwidth=5, inittext=self.params.splitpage or '')
+        self.splitmargin_textbox = guiTextEntry(master=frame_split_textbox, label=u'分割する際の左右マージン', boxwidth=5, inittext=self.params.splitmargin)
+        self.splitpages_textbox.grid(row=0, column=0)
+        self.splitmargin_textbox.grid(row=0, column=1)
+        self.split_check = guiRadioButton(master=frame_split, label=u'ページを分割', initcond=self.params.split,
+            slave_widget=None)
+        frame_split_textbox.grid(row=0, column=1)
+        self.split_check.grid(row=0, column=0, sticky=tk.W)
+        frame_split.pack(anchor=tk.W)
+
+        frame_bottom = tk.Frame(master=self)
+        button1 = tk.Button(master=frame_bottom, text="実行", command=self.convert)
+        button2 = tk.Button(master=frame_bottom, text=("閉じる"), command=quit)
+        button1.grid(row=0, column=0)
+        button2.grid(row=0, column=1)
+        frame_bottom.pack()
+    def convert(self):
+        self.params.img_folder = self.imgfolder_dirdiag.entry.get()
+        self.params.output_dir = self.outfolder_dirdiag.entry.get()
+        self.params.output_pdf = self.outputpdf_textbox.entry.get()
+        self.params.recursive = self.recursive_check.entry.get()
+        self.params.suffix = self.suffix_textbox.entry.get()
+        self.params.split = self.split_check.entry.get()
+        self.params.splitmargin = int(self.splitmargin_textbox.entry.get())
+        self.params.splitpage = self.splitpages_textbox.entry.get()
+        self.params.margin = int(self.crop_textbox.entry.get())
+        self.params.initcount = int(self.initcount_textbox.entry.get())
+        convert(params)
+
+class guiDirDiag(tk.Frame):
+    def __init__(self, master=None, label=None, initdir=None, width=100, boxwidth=30):
+        super().__init__(master=master)
+        self.label = label
+        self.initdir = initdir
+        self.boxwidth = boxwidth
+        self.width = width
+        self.create_widgets()
+    def create_widgets(self):
+        self.entry = tk.StringVar()
+        self.entry.set(self.initdir)
+        box = tk.Entry(self, textvariable=self.entry, width=self.boxwidth)
+        label = tk.Label(self, text=self.label)
+        button = tk.Button(self, text=u'フォルダ選択', command=self.dirdialog_clicked)
+        label.pack(side=tk.LEFT, anchor=tk.W)
+        box.pack(side=tk.LEFT)
+        button.pack(side=tk.LEFT)
+    def dirdialog_clicked(self):
+        #initdir = os.path.abspath(os.path.dirname(self.entry.get()))
+        initdir = os.path.abspath(self.entry.get())
+        dir = tkf.askdirectory(initialdir = initdir)
+        if dir is not None:
+            self.entry.set(dir)
+
+class guiTextEntry(tk.Frame):
+    def __init__(self, master=None, label=None, inittext=None, boxwidth=30):
+        super().__init__(master=master)
+        self.label = label
+        self.inittext = inittext
+        self.boxwidth = boxwidth
+        self.create_widgets()
+    def create_widgets(self):
+        self.entry = tk.StringVar()
+        self.entry.set(self.inittext)
+        box = tk.Entry(self, textvariable=self.entry, width=self.boxwidth)
+        label = tk.Label(self, text=self.label)
+        label.pack(side=tk.LEFT, anchor=tk.W)
+        box.pack(side=tk.LEFT)
+
+class guiRadioButton(tk.Frame):
+    def __init__(self, master=None, label=None, initcond=False, slave_widget=None):
+        super().__init__(master=master)
+        self.label = label
+        self.initcond = initcond
+        self.slave_widget = slave_widget
+        self.create_widgets()
+        if slave_widget is not None:
+            self.interactive()
+    def create_widgets(self):
+        self.entry = tk.BooleanVar()
+        self.entry.set(self.initcond)
+        if self.slave_widget is not None:
+            checkbox = tk.Checkbutton(master=self, text=self.label, variable=self.entry, command=self.interactive)
+        else:
+            checkbox = tk.Checkbutton(master=self, text=self.label, variable=self.entry)
+        checkbox.pack(side=tk.LEFT, anchor=tk.W)
+    def interactive(self):
+        if self.entry.get():
+            self.slave_widget.grid()
+        else:
+            self.slave_widget.grid_remove()
 
 if __name__ == "__main__":
     main()
